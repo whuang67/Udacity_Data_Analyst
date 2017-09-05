@@ -1,0 +1,609 @@
+---
+title: "Explore and Summarize Data"
+author: "Wenke Huang"
+date: "August 11, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# 0. Introduction
+
+In this project, I would like to explore and summarize the dataset `Red Wine Quality`.
+
+```{r global_options, include=FALSE}
+## This is used for hiding the codes
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+# 1. A stream-of-consciousness analysis and exploration
+
+- **Question 1:** What are the distributions of our variables? Can I present them quantitatively and/or visually?
+
+```{r, warning = FALSE}
+## Load dataset
+wineQualityReds <- read.csv("wineQualityReds.csv", row.names = "X")
+## Load necessary packages
+library(ggplot2)
+library(gridExtra)
+## write function to draw histogram
+histogram <- function(variable, bin_num = 30){
+  ggplot(data = wineQualityReds) +
+    geom_histogram(mapping = aes_string(x = variable,
+                                        y = "..density.."),
+                   bins = bin_num) +
+    stat_function(fun = dnorm,
+                  args = list(mean=mean(wineQualityReds[,names(wineQualityReds)==variable]),
+                              sd=sd(wineQualityReds[,names(wineQualityReds)==variable])),
+                  color = 'red')
+}
+## write function to draw histogram of log(variable)
+histogram1 <- function(variable, bin_num = 30){
+  ggplot(data = wineQualityReds) +
+    geom_histogram(mapping = aes_string(x = paste0('log(', variable, ')'),
+                                        y = "..density.."),
+                   bins = bin_num) +
+    stat_function(fun = dnorm,
+                 args = list(mean=mean(log(wineQualityReds[,names(wineQualityReds)==variable])),
+                             sd=sd(log(wineQualityReds[,names(wineQualityReds)==variable]))),
+                 color = 'red')
+}
+## write function to draw box_plot
+box_plot <- function(variable){
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = variable)) +
+    geom_boxplot(mapping = aes_string(y = variable)) +
+    geom_jitter(mapping = aes_string(y = variable),
+                alpha = 1/10) +
+    xlab("")
+}
+box_plot1 <- function(variable){
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = variable)) +
+    geom_boxplot(mapping = aes_string(y = paste0('log(', variable, ')'))) +
+    geom_jitter(mapping = aes_string(y = paste0('log(', variable, ')')),
+                alpha = 1/10) +
+    xlab("")
+}
+## write function to draw box_plot based on different quality values
+quality_boxplot <- function(variable){
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = as.factor(quality))) +
+    geom_boxplot(mapping = aes_string(y = variable)) +
+    xlab('quality')
+}
+
+## Display the structure of our dataset
+str(wineQualityReds)
+## Display the summary info of our dataset
+summary(wineQualityReds)
+
+## Histograms and Barplot
+## variable quality -> barplot
+grid.arrange(histogram("fixed.acidity"), box_plot("fixed.acidity"),
+             histogram("volatile.acidity"), box_plot("volatile.acidity"),
+             ncol = 2, nrow =2)
+grid.arrange(histogram("citric.acid"), box_plot("citric.acid"),
+             histogram("residual.sugar"), box_plot("residual.sugar"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram("chlorides"), box_plot("chlorides"),
+             histogram("free.sulfur.dioxide"), box_plot("free.sulfur.dioxide"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram("total.sulfur.dioxide"), box_plot("total.sulfur.dioxide"),
+             histogram("density"), box_plot("density"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram("pH"), box_plot("pH"),
+             histogram("sulphates"), box_plot("sulphates"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram("alcohol"), box_plot("alcohol"),
+             ggplot(data = wineQualityReds) +
+               geom_bar(mapping = aes(x = quality)),
+             ncol = 2, nrow = 2)
+```
+
+The five number summary statistics and mean values shows that many variables, such as `fixed.acidity` and `chlorides`, have positively skewed distribution. Additionally, We can find that the histograms of those variables that have positive skewness don't fit with their coresponding red normal distribution curves. We will perform logarithm transformation to see if they follow log-normal distribution apart from quality.
+
+At the same time, variable `volatile.acidity`, `density` and `pH` fit with their normal distribution curves pretty well.
+
+In additiona to histograms, box plots can help us understand how our variables distribute, and at the same time detect the outliers. From the boxplots above, they clearly tell us that many variables tend to be positively skewed, like `residual.sugar`, `chlorides`, etc.
+
+```{r}
+## Histograms and Barplot (log transformation)
+## variable quality -> barplot
+grid.arrange(histogram1("fixed.acidity"), box_plot1("fixed.acidity"),
+             histogram1("volatile.acidity"), box_plot1("volatile.acidity"),
+             ncol = 2, nrow = 2)
+grid.arrange(ggplot(data = wineQualityReds) +
+               geom_histogram(mapping = aes(x = log(citric.acid+1.1),
+                                            y = ..density..),
+                              bins = 30) +
+               stat_function(fun = dnorm,
+                             args = list(mean=mean(log(wineQualityReds$citric.acid+1.1)),
+                                         sd=sd(log(wineQualityReds$citric.acid+1.1))),
+                             color = "red"),
+             ggplot(data = wineQualityReds,
+                    mapping = aes(x = 'citric.acid',
+                                  y = citric.acid + 1.1)) +
+               geom_boxplot() + geom_jitter(alpha = 1/10),
+             histogram1("residual.sugar"), box_plot1("residual.sugar"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram1("chlorides"), box_plot1("chlorides"),
+             histogram1("free.sulfur.dioxide"), box_plot1("free.sulfur.dioxide"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram1("total.sulfur.dioxide"), box_plot1("total.sulfur.dioxide"),
+             histogram1("density"), box_plot1("density"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram1("pH"), box_plot1("pH"),
+             histogram1("sulphates"), box_plot1("sulphates"),
+             ncol = 2, nrow = 2)
+grid.arrange(histogram1("alcohol"), box_plot1("alcohol"),
+             ggplot(data = wineQualityReds) +
+               geom_bar(mapping = aes(x = quality)),
+             ncol = 2, nrow = 2)
+
+```
+
+After transformation , some of the transformed variables do have a distribution that we expect, like `fixed.acidity`, `free.sulfur.dioxide`, `total.sulfur.dioxide` and `sulphates`. Hence, the log-normal transformation of these three variables will be considered later.
+
+
+- **Question 2:** Are these variables correlated with each other? What methods can help us find their correlationships?
+
+
+```{r}
+## Correlation Coefficient Matrix
+## No variable 'quality'
+ccmatrix <- cor(wineQualityReds[, names(wineQualityReds) !='quality'])
+round(ccmatrix, 3)
+
+## Only the part that is above diagonal is necessary
+## Find out the pairs with absolute value of correlation coefficients not less than 0.6
+var_name = colnames(ccmatrix)
+for(i in 1:ncol(ccmatrix)){
+  for(j in 1:i){
+    if(abs(ccmatrix[i, j]) >= 0.6 & i != j)
+      print(paste(var_name[i], var_name[j], sep = " & "))
+  }
+}
+```
+
+Based on the pearson correlation coefficient matrix, we can extract these four pairs of variables that have the absolute value of correlation coefficient not less than 0.6, which indicates that they are either strongly positively or negatively correlated.
+
+
+```{r}
+## boxplot based on different `quality`
+grid.arrange(quality_boxplot("fixed.acidity"), quality_boxplot("volatile.acidity"),
+             quality_boxplot("citric.acid"), quality_boxplot("residual.sugar"),
+             quality_boxplot("chlorides"), quality_boxplot("free.sulfur.dioxide"),
+             quality_boxplot("total.sulfur.dioxide"), quality_boxplot("density"),
+             quality_boxplot("pH"), quality_boxplot("sulphates"),
+             quality_boxplot("alcohol"), ncol = 3, nrow = 4)
+```
+
+In addition to the correlationships among continuous variables, I am also interested in the correlationship between different continuous variables and variable `quality`. The boxplot is used here. Due to the outliers that we have mentioned above, it is a little harder to read some of these plots above, like `residual.sugar` and `chlorides`. We will restrict the y-axis targeting those variables and then re-draw the new boxplots.
+
+
+```{r}
+## boxplot based on different `quality` (after removing serious outliers)
+grid.arrange(quality_boxplot("fixed.acidity") + ylim(4, 12),
+             quality_boxplot("volatile.acidity"),
+             quality_boxplot("citric.acid"),
+             quality_boxplot("residual.sugar") +ylim(1, 4),
+             quality_boxplot("chlorides") + ylim(0, 0.2),
+             quality_boxplot("free.sulfur.dioxide") +ylim(0, 30),
+             quality_boxplot("total.sulfur.dioxide") +ylim(0, 100),
+             quality_boxplot("density"),
+             quality_boxplot("pH"),
+             quality_boxplot("sulphates")+ylim(0.1, 0.9),
+             quality_boxplot("alcohol"), ncol = 3, nrow = 4)
+```
+
+
+For variables including `volatile.acidity`, `sulphates` and `alcohol`, it is clear that as the quality goes up, their corresponding values tend to go up monotonically. For the rest variables, it is a littl bit hard to read their trends. Additionally statistical tests like ANVOA can be considered later.
+
+- **Question 3:** Let's go back to those four pairs of continuous variables. Can I visualize their correlationship on a 2-D plot? Is there any obvious linear regression trend? Will removing outliers change their linear regression trend? Is logarithm transformation helpful (for those that may follow log-normal distribution)?
+
+
+```{r}
+## Scatter plot citric.acid vs fixed.acidity
+grid.arrange(
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = citric.acid,
+                       y = fixed.acidity)) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = subset(wineQualityReds,
+                       citric.acid <= 0.9 &
+                         fixed.acidity <=14),
+         mapping = aes(x = citric.acid,
+                       y = fixed.acidity)) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = citric.acid,
+                       y = log(fixed.acidity))) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = subset(wineQualityReds,
+                       citric.acid <= 0.9),
+         mapping = aes(x = citric.acid,
+                       y = log(fixed.acidity))) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ncol = 2, nrow = 2)
+```
+
+The top-left, top-right, bottom-left and bottom-right are scatter plots with their linear regression line of original variables, original variables without outliers, variables after logarithm transformation and variables after logarithm transformation without outliers.
+
+We can read that the linear trend is obvious. It also seems that removing outliers does not move the position or change the slope of the linear regression line dramatically.
+
+
+```{r}
+## Scatter plot total.sulfur.dioxide vs free.sulfur.dioxide
+grid.arrange(
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = total.sulfur.dioxide,
+                       y = free.sulfur.dioxide)) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = subset(wineQualityReds,
+                       total.sulfur.dioxide < 200 &
+                         free.sulfur.dioxide < 60),
+         mapping = aes(x = total.sulfur.dioxide,
+                       y = free.sulfur.dioxide)) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = log(total.sulfur.dioxide),
+                       y = log(free.sulfur.dioxide))) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = subset(wineQualityReds,
+                       log(total.sulfur.dioxide) < 5.5 &
+                         log(free.sulfur.dioxide) >= 1 ),
+         mapping = aes(x = log(total.sulfur.dioxide),
+                       y = log(free.sulfur.dioxide))) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ncol = 2, nrow = 2)
+```
+
+
+Like the previous one, the top-left, top-right, bottom-left and bottom-right are scatter plots with their linear regression line of original variables, original variables without outliers, both variables after logarithm transformation and variables after logarithm transformation without outliers.
+
+We can read the for the two plots in the first row, the linear trend is not obvious. However, after we perform the logarithm transformation on both y-axis and x-axis, the linear trend becomes much more clear.
+
+
+```{r}
+## Scatter plot density vs fixed.acidity
+grid.arrange(
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = density,
+                       y = fixed.acidity)) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = density,
+                       y = log(fixed.acidity))) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ncol = 2)
+```
+
+
+The left and right are scatter plots with their linear regression line of original variables and variables after logarithm transformation. No outlier is removed here. We can still detect the linear trend, but however, it seems that logarithm transformation on variable `fixed.acidity` does not make the trend more obvious.
+
+
+```{r}
+## Scatter plot pH vs fixed.acidity
+grid.arrange(
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = pH,
+                       y = fixed.acidity)) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = pH,
+                       y = log(fixed.acidity))) +
+    geom_point(alpha = 1/5) +
+    geom_smooth(method = "lm"),
+  ncol = 2)
+```
+
+
+The left and right are scatter plots with their linear regression line of original variables and variables after logarithm transformation like the previous one. No outlier is removed here, either. We can still detect the linear trend, and it seems that logarithm transformation on variable `fixed.acidity` does slightly make this trend more obvious.
+
+- **Question 4:** I'm interested in adding the variable `quality` into these scatter plots. I would like to see if wine with different qualities may distribute in particular areas in the scatter plots.
+
+
+```{r}
+grid.arrange(
+  ## Scatter plot citric.acid vs fixed.acidity
+  ## colored with quality
+  ggplot(data = subset(wineQualityReds,
+                       citric.acid <= 0.9),
+         mapping = aes(x = citric.acid,
+                       y = log(fixed.acidity),
+                       color = as.factor(quality))) +
+    geom_point(size = 1.2) +
+    scale_color_brewer("quality") +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ## Scatter plot total.sulfur.dioxide vs free.sulfur.dioxide
+  ## colored with quality
+  ggplot(data = subset(wineQualityReds,
+                       log(free.sulfur.dioxide) >= 1 &
+                         log(total.sulfur.dioxide) <= 5.5),
+         mapping = aes(x = log(total.sulfur.dioxide),
+                       y = log(free.sulfur.dioxide),
+                       color = as.factor(quality))) +
+    geom_point(size = 1.2) +
+    scale_color_brewer("quality") +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ## Scatter plot density vs fixed.acidity
+  ## colored with quality
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = density,
+                       y = log(fixed.acidity),
+                       color = as.factor(quality))) +
+    geom_point(size = 1.2) +
+    scale_color_brewer("quality") +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ## Scatter plot pH vs fixed.acidity
+  ## colored with quality
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = pH,
+                       y = log(fixed.acidity),
+                       color = as.factor(quality))) +
+    geom_point(size = 1.2) +
+    scale_color_brewer("quality") +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ncol = 2, nrow = 2)
+```
+
+
+We would like to color our plots based on their corresponding quality, to see if wine with different qualities may tend to distribute in paricular areas of our scatter plots (the four variable pairs above). Here, we only focus the scatter plot with logarithm transformation and without outliers if we performed and removed, respectively.
+
+The darker coler indicates higher wine quality while the lighter color indicates the lower wine quality. We can read from these four plots that basically it is impossible to extract very useful information from them. Hence, we would like combine several qualities scores together. If the score is lower than or equal to 5, we set it to be "bad"; otherwise, it is "good".
+
+
+```{r}
+wineQualityReds$quality_1 = ifelse(wineQualityReds$quality <= 5,
+                                   "bad", "good")
+
+grid.arrange(
+  ## Scatter plot citric.acid vs fixed.acidity
+  ## colored with quality
+  ggplot(data = subset(wineQualityReds,
+                       citric.acid <= 0.9),
+         mapping = aes(x = citric.acid,
+                       y = log(fixed.acidity),
+                       color = quality_1)) +
+    geom_point(size = 1.2) +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ## Scatter plot total.sulfur.dioxide vs free.sulfur.dioxide
+  ## colored with quality
+  ggplot(data = subset(wineQualityReds,
+                       log(free.sulfur.dioxide) >= 1 &
+                         log(total.sulfur.dioxide) <= 5.5),
+         mapping = aes(x = log(total.sulfur.dioxide),
+                       y = log(free.sulfur.dioxide),
+                       color = quality_1)) +
+    geom_point(size = 1.2) +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ## Scatter plot density vs fixed.acidity
+  ## colored with quality
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = density,
+                       y = log(fixed.acidity),
+                       color = quality_1)) +
+    geom_point(size = 1.2) +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ## Scatter plot pH vs fixed.acidity
+  ## colored with quality
+  ggplot(data = wineQualityReds,
+         mapping = aes(x = pH,
+                       y = log(fixed.acidity),
+                       color = quality_1)) +
+    geom_point(size = 1.2) +
+    geom_smooth(method = "lm", se = FALSE, size = 1),
+  ncol = 2, nrow = 2)
+```
+
+
+I am interested in the scatter plot of `log(fixed.acidity)` vs `density`. It seems that there exists a border between good and bad wine. For the rest three plots, it is still hard to see if wine with different qualites tend to distribute in particular areas.
+
+- **Question 5:** Would PCA be helpful to find the 'jointed' distributions of other possible variables and `quality`? I would like to re-find the solutions of **Question 4** by using the scatter plot of PC1 vs PC2 this time.
+
+
+```{r}
+## Principal Component Analysis
+library(ggfortify)
+PCA <- prcomp(~ .-quality-quality_1, data = wineQualityReds,
+              center =TRUE, scale=TRUE)
+new_dat <- data.frame(predict(PCA))
+new_dat <- new_dat[, names(new_dat) %in% c("PC1", "PC2")]
+new_dat$quality <- wineQualityReds$quality
+new_dat$quality_1 <- wineQualityReds$quality_1
+## PCA plot
+PCA_plot <- function(PC_){
+  ggplot() +
+    geom_bar(mapping = aes(x = rownames(PCA$rotation),
+                           y = PCA$rotation[, colnames(PCA$rotation) == PC_]),
+             stat = "identity") +
+    ggtitle(PC_) + ylab(PC_) + xlab("variables") +
+    theme(axis.text.x = element_text(angle = -15)) +
+    geom_hline(yintercept = 0)
+}
+grid.arrange(PCA_plot("PC1"), PCA_plot("PC2"),
+             PCA_plot("PC3"), PCA_plot("PC4"),
+             nrow = 2, ncol = 2)
+grid.arrange(PCA_plot("PC5"), PCA_plot("PC6"),
+             PCA_plot("PC7"), PCA_plot("PC8"),
+             nrow = 2, ncol = 2)
+grid.arrange(PCA_plot("PC9"), PCA_plot("PC10"),
+             PCA_plot("PC11"),
+             ggplot(mapping = aes(y = PCA$sdev^2,
+                                  x = seq(1, length(PCA$sdev)))) +
+               geom_line() + geom_point() +
+               scale_x_continuous(breaks = seq(1, length(PCA$sdev), by =1)) +
+               ylab("Variance") + xlab("Principal Component") + ggtitle("PCA"),
+             nrow = 2, ncol = 2)
+autoplot(PCA,
+         data = wineQualityReds,
+         loadings = TRUE, loadings.colour = "blue",
+           loadings.label = TRUE, loadings.label.colour = "orange",
+           size = 1.2, colour = "quality_1")
+
+```
+
+
+Here, we find out that the first two principal components only explain part of the total variance, which is not what usually want. This may be the reason why our scatter plot does not offer an output that I want even though we can still read the trend that good quality wine tends to have negative PC2.
+
+# 2. Final Plots and Summary
+## 2.1 Histogram of total.sulfur.dioxide
+
+
+```{r}
+## Histogram of total.sulfur.dioxide
+grid.arrange(histogram('total.sulfur.dioxide') +
+               ggtitle("Histogram of total.sulfur.dioxide") +
+               xlab("total.sulfur.dioxide (mg/dm^3)"),
+             box_plot("total.sulfur.dioxide")  +
+               ggtitle("Boxplot of total.sulfur.dioxide") +
+               ylab("total.sulfur.dioxide (mg/dm^3)"),
+             histogram1("total.sulfur.dioxide") +
+               ggtitle("Histogram of log(total.sulfur.dioxide)") +
+               xlab("total.sulfur.dioxide (log(mg/dm^3))"),
+             box_plot1("total.sulfur.dioxide") +
+               ggtitle("Boxplot of log(total.sulfur.dioxide)") +
+               ylab("total.sulfur.dioxide (log(mg/dm^3))"),
+             ncol =2, nrow = 2)
+```
+
+
+The plot on the left is the histogram of our variable `total.sulfur.dioxide` while the plot on the right is the histogram of the same variable `total.sulfur.dioxide` after logarithm transformation. The red lines in both histograms represent the normal distribution curves with mean and standard deviation being equal to sample mean and standard deviation, respectively.
+
+It is obvious that the variable `total.sulfur.dioxide` does not follow normal distribution based on the left histogram. Because its positively skewed distribution does not fit with the normal distribution curve.
+
+Furtherly, we would like to test if it follows log-normal distribution. The plot on the right shows us that the histogram of `log(total.sulfur.dioxide)` with its normal distribution curve. This one looks much more "normal" than the left one since there is no obvious positive or negative skewness and its distribution basically fits its corresponding normal distribution curve.
+
+Hence, we can conclude that the variable `total.sulfur.dioxide` basically follows the log-normal distribution.
+
+## 2.2 Scatter plot of free.sulfur.dioxide vs total.sulfur.dioxide
+
+
+```{r}
+## Scatterplot of free.sulfur.dioxide vs total.sulfur.dioxide
+plot3 <- ggplot(data = wineQualityReds,
+       mapping = aes(x = total.sulfur.dioxide,
+                     y = free.sulfur.dioxide)) +
+  geom_point(alpha = 1/5) +
+  ggtitle("free vs total") +
+  geom_smooth(method = "lm") +
+  xlab("total.sulfur.dioxide (mg/dm^3)") +
+  ylab("free sulfur.dioxide (mg/dm^3)")
+
+## Scatterplot of free.sulfur.dioxide vs total.sulfur.dioxide
+## without ourliers
+plot4 <- ggplot(data = subset(wineQualityReds,
+                     total.sulfur.dioxide <200 &
+                       free.sulfur.dioxide <60),
+       mapping = aes(x = total.sulfur.dioxide,
+                     y = free.sulfur.dioxide)) +
+  geom_point(alpha = 1/5) +
+  ggtitle("free vs total (subset)") +
+  geom_smooth(method = "lm") +
+  xlab("total.sulfur.dioxide (mg/dm^3)") +
+  ylab("free sulfur.dioxide (mg/dm^3)")
+
+## Scatterplot of free.sulfur.dioxide vs total.sulfur.dioxide
+## with logarithm transformation
+plot5 <- ggplot(data = wineQualityReds,
+       mapping = aes(x = log(total.sulfur.dioxide),
+                     y = log(free.sulfur.dioxide))) +
+  geom_point(alpha = 1/5) +
+  ggtitle("log(free) vs log(total)") +
+  geom_smooth(method = "lm") +
+  xlab("total.sulfur.dioxide (log(mg/dm^3))") +
+  ylab("free sulfur.dioxide log((mg/dm^3))")
+
+## Scatterplot of free.sulfur.dioxide vs total.sulfur.dioxide
+## with logarithm transformation but without outliers
+plot6 <- ggplot(data = subset(wineQualityReds,
+                     log(total.sulfur.dioxide) < 5.5&
+                       log(free.sulfur.dioxide) > 1),
+       mapping = aes(x = log(total.sulfur.dioxide),
+                     y = log(free.sulfur.dioxide))) +
+  geom_point(alpha = 1/5) +
+  ggtitle("log(free) vs log(total)") +
+  geom_smooth(method = "lm") +
+  xlab("total.sulfur.dioxide log((mg/dm^3))") +
+  ylab("free sulfur.dioxide log((mg/dm^3))")
+
+grid.arrange(plot3, plot4, plot5, plot6, nrow =2, ncol =2)
+```
+
+
+The four plots here are scatter plots related with variable `free.sulfur.dioxide` vs `total.sulfur.dioxide`. The word `free` and `total` represent `free.sulfur.dioxide` and `total.sulfur.dioxide`, respectively. `log()` means that we perform logarithm transformation on the corresponding variable. The blue line in the plot shows the linear regression line.
+
+The top-left plot shows that there may exist potential linear trend between these two variables. The top-right plot shows the scatter plot after we remove those points that are far away from others (AKA outliers) and its corresponding linear regression line. We can see that these two regression lines were moved dramatically.
+
+The bottom-left plot shows that the linear trend is much more obvious after we perform logarithm transformation on both variables. The bottom-right plot is the scatter plot after we remove outliers. The outliers here may not be exactly the same as the top-right plot. We can notice that these two regression lines were basically at the same position.
+
+Hence, we may think that `total.sulfur.dioxide` and `free.sulfur.dioxide` are highly correlated with each other. Especially after we perform logarithm transformation on both variables, there exists an obvious linear trend. Additionally, the pearson correlation coefficient of these two variables and these two after logarithm transformation are `r with(wineQualityReds, cor(total.sulfur.dioxide, free.sulfur.dioxide))` and `r with(wineQualityReds, cor(log(total.sulfur.dioxide), log(free.sulfur.dioxide)))`, respectively, which also prove our opinion.
+
+## 2.3 Principal Component Analysis plot
+
+
+```{r}
+## Plot of PCA
+grid.arrange(PCA_plot("PC1"), PCA_plot("PC2"),
+             ggplot(mapping = aes(y = PCA$sdev^2,
+                                  x = seq(1, length(PCA$sdev)))) +
+               geom_line() + geom_point() +
+               scale_x_continuous(breaks = seq(1, length(PCA$sdev), by =1)) +
+               ylab("Variance") + xlab("Principal Component") +
+               ggtitle("PCA"),
+             nrow = 2, ncol = 2)
+
+## Scatterplot of PC2 vs PC1
+## colored with quality (good or bad)
+autoplot(PCA,
+         data = wineQualityReds,
+         colour = "quality_1",
+         loadings = TRUE, loadings.colour = "blue",
+         loadings.label = TRUE, loadings.label.colour = "orange",
+         size = 1.2) +
+  ggtitle("PCA plot, PC2 vs PC1")
+```
+
+
+Here, we extract the first two Principal Components. We can notice that our 1st PC mainly depends on variable `citric.acid`, `density`, `fixed.acidity` and `pH`. And our 2nd PC mainly depends on variable `alcohol`, `free.sulfur.dioxide` and `total.sulfur.dioxide`. These information can also be read from the arrows of our scatter plot. Because the direction of these arrows are nearly parallel with x-axis and y-axis, respectively.
+
+Here, we drew our scatter plot of PC2 vs PC1. It is still not very easy to clearly define the 'territory' of different qualities, Especially, when PC2 is positive. However, when we have a negative PC2, it tends to be much clearer that most points of this area are pre-defined as a good quality wine.
+
+Based on the plot of PCA we can see that, the first two Principal Components do not explain most of the variances, and additional principal components should be added in case we may face the issue of under-fitting. This may also be the reason that the scatter plot of PC2 vs PC1 may not give us the exact result that we want.
+
+# 3. Reflection
+
+## 3.1 My struggle
+
+When I tried to find if we can cluster or stratify the scatter plots obtained from part 2.2 by using variable `quality`, I found its impossible to do that. Because I cannot find any obvious trend which may lead me to the result that  I would like to have.
+
+## 3.2 My success
+
+Most plots have good performances. For example, I successfully found out the distributions of different variables and compared them with the corresponding normal distribution curve. Since some of the distributions look like a log-normal distribution, I also performed logarithm transformation and successfully found several variables which may follow log-normal distribution, such as `total.sulfur.dioxide`.
+
+## 3.3 Future work
+
+In the future, I would like to mainly focus on the struggle that I had.
+
+- Very few wine products have the score lower than 5 or greater than 7. I may try use the subset of wine products with quality score being 5, 6 and 7 only and reperform PCA.
+
+- After we finished detecting outliers, we may think removing those points which may influence our model seriously. Without outliers, we may be able to get the results that we want.
+
+- We already detected that some variables follow log-normal distribution. We can firstly tranform those variables, then reperform PCA based on our new dataset.
+
+# Reference
+
+N/A

@@ -1,0 +1,9 @@
+## Reference
+
+- Element, OpenStreetMap Wiki, https://wiki.openstreetmap.org/wiki/Elements
+
+- Data Wrangling, Udacity, https://www.udacity.com/
+
+- Street Suffix Abbreviations, United States Postal Services, https://pe.usps.com/text/pub28/28apc_002.htm
+
+- Zip codes of Honolulu, HI, United States Postal Services, https://tools.usps.com/go/ZipLookupResultsAction!input.action?items=30&page=1&companyName=&address1=&address2=&city=Honolulu&state=HI&zip=96795
